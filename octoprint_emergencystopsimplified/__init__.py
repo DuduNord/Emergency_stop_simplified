@@ -16,9 +16,10 @@ class Emergency_stop_simplifiedPlugin(octoprint.plugin.StartupPlugin,
 
     def initialize(self):
         GPIO.setwarnings(False)  # Disable GPIO warnings
-        self.send_gcode = False
+        self.send_gcode = False     # boolean that is used to say if the function has to send the GCODE or not. in previous pluggin, "self.estop_sent" was used to say if the code has been already sent or not
         self.pin_initialized = False
 
+    # pluggin parameters :
     @property
     def pin(self):
         return int(self._settings.get(["pin"]))
@@ -26,6 +27,10 @@ class Emergency_stop_simplifiedPlugin(octoprint.plugin.StartupPlugin,
     @property
     def switch(self):
         return int(self._settings.get(["switch"]))
+
+    @property
+    def mode(self):
+        return int(self._settings.get(["mode"]))
 
     @property
     def triggerWhenOpen(self):
@@ -63,6 +68,7 @@ class Emergency_stop_simplifiedPlugin(octoprint.plugin.StartupPlugin,
         octoprint.plugin.SettingsPlugin.on_settings_save(self, data)
         self._setup_button()
 
+    # configuration of the pin with [pin], [switch] and [mode]
     def _setup_button(self):
         if self.sensor_enabled():
             self._logger.info("Setting up button.")
@@ -88,6 +94,7 @@ class Emergency_stop_simplifiedPlugin(octoprint.plugin.StartupPlugin,
         else:
             self._logger.info("Pin not configured, won't work unless configured!")
 
+    # hook to octoprint ?
     def sending_gcode(self, comm_instance, phase, cmd, cmd_type, gcode, subcode=None, tags=None, *args, **kwargs):
         if self.send_gcode:
             self.send_M112()
@@ -95,15 +102,18 @@ class Emergency_stop_simplifiedPlugin(octoprint.plugin.StartupPlugin,
     def sensor_enabled(self):
         return self.pin != -1
 
+    # return if the button has triggered or not
     def emergency_stop_triggered(self):
         triggered = (GPIO.input(self.pin) != self.switch) if self.triggerWhenOpen else (GPIO.input(self.pin) == self.switch)
         return self.pin_initialized and self.sensor_enabled() and triggered
 
+    # when an event occurs in octoprint, this function is triggered and check if the "event" is a connection to the printer. 
+    # this is used to "reset" the pluggin and be able to resent an STOP command when octoprint does connect to the printer
+    # or avoid any other message to be sent is the printer is not connected
     def on_event(self, event, payload):
-        if event is Events.CONNECTED:
+        # if The server has connected to the printer, allow a new message to be send
+        if event is Events.DISCONNECTED:
             self.send_gcode = False
-        elif event is Events.DISCONNECTED:
-            self.send_gcode = True
 
         if not self.sensor_enabled():
             if event is Events.USER_LOGGED_IN:
@@ -111,11 +121,14 @@ class Emergency_stop_simplifiedPlugin(octoprint.plugin.StartupPlugin,
             elif event is Events.PRINT_STARTED:
                 self._plugin_manager.send_plugin_message(self._identifier, dict(type="info", autoClose=True, msg="You may have forgotten to configure this plugin."))
 
+    # function that is called when the pin detect an event
     def button_callback(self, _):
         self._logger.info("Emergency stop button was triggered")
 
+        # check if the printer is printing or not
         state = self._printer.get_state_id()
 
+        # test if it has to stop or not
         if self.emergency_stop_triggered() and state in ['PRINTING', 'PAUSED']:
             if self.action == 0:
                 self.send_gcode = True
