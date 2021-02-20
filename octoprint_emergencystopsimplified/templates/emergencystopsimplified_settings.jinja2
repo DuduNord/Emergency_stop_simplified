@@ -1,6 +1,15 @@
 <h3>{{ _('Emergency Stop Simplified') }}</h3>
 <form class="form-horizontal marginTop">
-    <div class="control-group">
+        <div class="control-group">
+            <label class="control-label">{{ _('Board Pin Mode:') }}</label>
+            <div class="controls" data-toggle="tooltip" title="{{ _('RPi pins numbered in Board mode or BCM mode?') }}">
+                <select class="select-mini" data-bind="value: value: settings.plugins.emergencystopsimplified.mode">
+                    <option value=0>{{ _('Board Mode') }}</option>
+                    <option value=1>{{ _('BCM Mode') }}</option>
+                </select>
+            </div>
+        </div>
+        <div class="control-group">
         <div class="marginBot">
             <b>Which Raspberry Pi GPIO pin your button output is attached to (-1 disables the plugin)</b>
         </div>
@@ -22,6 +31,14 @@
                 <option value=1>{{ _('3.3V') }}</option>
             </select>
         </div>
+        <label class="control-label">{{ _('Emergency stoped is triggered when:') }}</label>
+        <div class="controls" data-toggle="tooltip"
+             title="{{ _('Trigger when') }}">
+            <select class="select-mini" data-bind="value: settings.plugins.emergencystopsimplified.triggerWhenOpen">
+                <option value=1>{{ _('Button opened') }}</option>
+                <option value=0>{{ _('Button closed') }}</option>
+            </select>
+        </div>
         <div class="alert-info wy-alert-warning marginTop">
             <span class="icon-info-sign"/>
             <span class="octoFontFamily iconIndent">Button is triggered when open.</span>
@@ -33,6 +50,20 @@
         <div style="font-size: 11px">
             For more information click <a
                 href="https://github.com/Mechazawa/Emergency_stop_simplified">here</a>
+        </div>
+    </div>
+
+        <div class="control-group">
+        <div class="marginBot">
+            <b>{{ _('Which action to perform on button press') }}</b>
+        </div>
+        <label class="control-label">{{ _('Action to perform:') }}</label>
+        <div class="controls" data-toggle="tooltip"
+             title="{{ _('Gcode M112 shuts down the machine, turns off all the steppers and heaters, and if possible, turns off the power supply. A reset is required to return to operational mode.') }}">
+            <select class="select-mini" data-bind="value: settings.plugins.emergencystopsimplified.action">
+                <option value=0>{{ _('M112') }}</option>
+                <option value=1>{{ _('Cancel print') }}</option>
+            </select>
         </div>
     </div>
 </form>
